@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map with GPS Location</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        #map {
+            height: 600px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>GPS Location Map</h1>
+    <button id="gps-btn">Show My GPS Location</button>
+    <div id="map"></div>
+
+    <script>
+        // Initialize the map
+        const map = L.map('map').setView([0, 0], 2);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+
+        // Fetch predefined location data from the server
+        fetch('/locations/')
+            .then(response => response.json())
+            .then(locations => {
+                if (locations.length > 0) {
+                    map.setView([locations[0].latitude, locations[0].longitude], 5);
+                }
+
+                // Add markers for each location
+                locations.forEach(location => {
+                    L.marker([location.latitude, location.longitude])
+                        .addTo(map)
+                        .bindPopup(`<b>${location.name}</b>`);
+                });
+            })
+            .catch(error => console.error('Error fetching locations:', error));
+
+        // Geolocation: Use GPS to find the user's precise location
+        const gpsBtn = document.getElementById('gps-btn');
+        gpsBtn.addEventListener('click', () => {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        const { latitude, longitude } = position.coords;
+
+                        // Display the GPS location on the map
+                        const gpsMarker = L.marker([latitude, longitude])
+                            .addTo(map)
+                            .bindPopup('<b>Your GPS Location</b>')
+                            .openPopup();
+
+                        // Center the map on the GPS location
+                        map.setView([latitude, longitude], 15);
+                    },
+                    error => {
+                        console.error('Geolocation error:', error);
+                        alert('Error retrieving GPS location. Please check your permissions or device settings.');
+                    },
+                    {
+                        enableHighAccuracy: true, // Force GPS hardware usage for precise location
+                        timeout: 10000,          // Maximum time to wait for GPS response
+                        maximumAge: 0            // No caching of previous positions
+                    }
+                );
+            } else {
+                alert('Geolocation is not supported by your browser.');
+            }
+        });
+    </script>
+</body>
+</html>
